@@ -129,7 +129,6 @@ class Hotel {
             addRoom(new Room(300 + i, "Suite", 300));
     }
 
-    // ✅ New method: checks if a room is free for given dates
     public boolean isRoomAvailable(Room room, LocalDate checkIn, LocalDate checkOut) {
         for (Reservation r : reservations) {
             if (r.getRoom().getRoomNumber() == room.getRoomNumber()) {
