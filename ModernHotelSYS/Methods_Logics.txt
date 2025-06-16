@@ -1,0 +1,233 @@
+1. toString() Methods
+What is toString()?
+In Java, toString() is a special method that returns a string representation of an object.
+When you print an object (e.g., System.out.println(reservation);), Java calls its toString() method.
+Example in Reservation:
+@Override
+public String toString() {
+    return "Reservation ID: " + reservationId + "\n"
+            + "Guest: " + guest.getName() + "\n"
+            + "Room: " + room.getRoomNumber() + " (" + room.getRoomType() + ")\n"
+            + "Check-in: " + checkInDate + ", Check-out: " + checkOutDate + "\n"
+            + "Total Cost: $" + calculateTotalCost();
+}
+How does guest.getName() work?
+
+guest is a Guest object inside the reservation.
+getName() is a method in the Guest class that returns the guest’s name.
+Real-life analogy: Imagine a hotel reservation slip. It lists the guest’s name by looking it up in the guest’s profile.
+
+2. calculateTotalCost() and java.time.temporal.ChronoUnit.DAYS.between
+Method:
+public double calculateTotalCost() {
+    long nights = java.time.temporal.ChronoUnit.DAYS.between(checkInDate, checkOutDate);
+    return nights * room.getPricePerNight();
+}
+Purpose: Calculates the total price for the stay.
+What is ChronoUnit.DAYS.between?
+ChronoUnit.DAYS.between(date1, date2) calculates the number of days between two dates.
+Real-life analogy: If you check in on June 1 and check out on June 4, you stayed 3 nights.
+Logic:
+Find the number of nights between check-in and check-out.
+Multiply by the price per night.
+
+3. autoAddRooms(int singles, int doubles, int suites)
+Method:
+public void autoAddRooms(int singles, int doubles, int suites) {
+    for (int i = 1; i <= singles; i++)
+        addRoom(new Room(100 + i, "Single", 100));
+    for (int i = 1; i <= doubles; i++)
+        addRoom(new Room(200 + i, "Double", 150));
+    for (int i = 1; i <= suites; i++)
+        addRoom(new Room(300 + i, "Suite", 300));
+}
+Purpose: Quickly adds a batch of rooms of each type.
+Logic:
+For each room type, create the specified number of rooms.
+Room numbers are generated (e.g., Singles: 101, 102...; Doubles: 201, 202...).
+Real-life analogy: Setting up a new hotel and labeling rooms by type and number.
+
+4. isRoomAvailable(Room room, LocalDate checkIn, LocalDate checkOut)
+Method:
+public boolean isRoomAvailable(Room room, LocalDate checkIn, LocalDate checkOut) {
+    for (Reservation r : reservations) {
+        if (r.getRoom().getRoomNumber() == room.getRoomNumber()) {
+            if (!(checkOut.isBefore(r.getCheckInDate()) || checkIn.isAfter(r.getCheckOutDate()))) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+Purpose: Checks if a room is free for the given dates.
+Logic:
+For each reservation, if it’s for the same room, check if the requested dates overlap.
+If there’s any overlap, the room is not available.
+Real-life analogy: You can’t book a hotel room if someone else is already staying during those dates.
+
+5. findAvailableRoom(String type, LocalDate checkIn, LocalDate checkOut)
+Method:
+public Room findAvailableRoom(String type, LocalDate checkIn, LocalDate checkOut) {
+    for (Room r : rooms) {
+        if (r.getRoomType().equalsIgnoreCase(type) && isRoomAvailable(r, checkIn, checkOut)) {
+            return r;
+        }
+    }
+    return null;
+}
+Purpose: Finds a free room of the requested type.
+Logic:
+Go through all rooms.
+If the room matches the type and is available, return it.
+Real-life analogy: The receptionist checks the list for an available “Double” room for your dates.
+
+6. makeReservation(Guest guest, String type, LocalDate checkIn, int nights)
+Method:
+public Reservation makeReservation(Guest guest, String type, LocalDate checkIn, int nights) {
+    LocalDate checkOut = checkIn.plusDays(nights);
+    Room room = findAvailableRoom(type, checkIn, checkOut);
+    if (room != null) {
+        Reservation reservation = new Reservation("RES-" + (reservationCounter++), guest, room, checkIn, checkOut);
+        reservations.add(reservation);
+        saveReservationsToFile();
+        return reservation;
+    }
+    return null;
+}
+Purpose: Tries to reserve a room. If successful, adds it to the list and saves to file.
+What is plusDays(nights)?
+Adds the number of nights to the check-in date to get the check-out date.
+Real-life analogy: If you check in on June 1 for 3 nights, you check out on June 4.
+Reservation ID:
+"RES-" + (reservationCounter++) creates unique IDs like RES-1, RES-2, etc.
+
+7. cancelReservation(String reservationId)
+Method:
+public void cancelReservation(String reservationId) {
+    Iterator<Reservation> it = reservations.iterator();
+    while (it.hasNext()) {
+        Reservation r = it.next();
+        if (r.getReservationId().equals(reservationId)) {
+            it.remove();
+            saveReservationsToFile();
+            System.out.println("Reservation " + reservationId + " canceled.");
+            return;
+        }
+    }
+    System.out.println("Reservation ID not found.");
+}
+Purpose: Removes a reservation by ID.
+Logic:
+Go through all reservations.
+If the ID matches, remove it and save the updated list.
+Real-life analogy: Canceling your hotel booking at the front desk.
+
+8. listAvailableRooms(LocalDate checkIn, int nights, String type)
+Method:
+public void listAvailableRooms(LocalDate checkIn, int nights, String type) {
+    LocalDate checkOut = checkIn.plusDays(nights);
+    boolean found = false;
+    for (Room r : rooms) {
+        if (r.getRoomType().equalsIgnoreCase(type) && isRoomAvailable(r, checkIn, checkOut)) {
+            System.out.println(r);
+            found = true;
+        }
+    }
+    if (!found)
+        System.out.println("No available rooms for the given date.");
+}
+Purpose: Prints all available rooms for the given type and dates.
+Logic:
+For each room, if it matches the type and is available, print it.
+If none are found, print a message.
+
+9. listReservations()
+Method:
+public void listReservations() {
+    if (reservations.isEmpty())
+        System.out.println("No current reservations.");
+    else
+        for (Reservation r : reservations) {
+            System.out.println(r);
+            System.out.println("----------------------------------------");
+        }
+}
+Purpose: Prints all current reservations.
+Logic:
+If there are no reservations, print a message.
+Otherwise, print each reservation.
+
+10. saveReservationsToFile()
+Method:
+public void saveReservationsToFile() {
+    try (PrintWriter writer = new PrintWriter(new File("reservations.csv"))) {
+        writer.println("Reservation ID,Guest Name,Room Number,Room Type,Check-in Date,Check-out Date,Total Cost");
+        for (Reservation r : reservations) {
+            writer.println(r.getReservationId() + "," + r.getGuest().getName() + "," +
+                    r.getRoom().getRoomNumber() + "," + r.getRoom().getRoomType() + "," +
+                    r.getCheckInDate() + "," + r.getCheckOutDate() + "," + r.calculateTotalCost());
+        }
+    } catch (IOException e) {
+        System.out.println("Error saving reservations: " + e.getMessage());
+    }
+}
+Purpose: Writes all reservations to a CSV file.
+How does it work?
+PrintWriter is a Java class for writing text to files.
+new PrintWriter(new File("reservations.csv")) opens (or creates) the file for writing.
+The first line is the header.
+Each reservation is written as a line in the CSV.
+Real-life analogy: The hotel keeps a spreadsheet of all bookings.
+Is this the only way?
+No, you can use other classes (e.g., FileWriter, BufferedWriter, or libraries like OpenCSV), but PrintWriter is simple and effective for basic CSV writing.
+
+11. loadReservationsFromFile()
+Method:
+public void loadReservationsFromFile() {
+    try (BufferedReader reader = new BufferedReader(new FileReader("reservations.csv"))) {
+        String line = reader.readLine();
+        while ((line = reader.readLine()) != null) {
+            String[] parts = line.split(",");
+            if (parts.length < 7)
+                continue;
+            Guest guest = new Guest(parts[1], "N/A");
+            Room room = findAvailableRoom(parts[3], LocalDate.parse(parts[4]), LocalDate.parse(parts[5]));
+            if (room != null) {
+                reservations.add(new Reservation(parts[0], guest, room, LocalDate.parse(parts[4]),
+                        LocalDate.parse(parts[5])));
+            }
+        }
+    } catch (IOException e) {
+        System.out.println("Error loading reservations: " + e.getMessage());
+    }
+}
+Purpose: Reads reservations from the CSV file and loads them into the system.
+How does it work?
+BufferedReader and FileReader are used to read the file line by line.
+The first line (header) is skipped.
+Each line is split by commas into fields.
+For each line, a new Guest, Room, and Reservation are created and added to the list.
+Real-life analogy: The hotel loads its booking spreadsheet into the computer at startup.
+
+12. main Method and Program Flow
+How does the main class work?
+public static void main(String[] args) {
+    Scanner scanner = new Scanner(System.in);
+    Hotel hotel = new Hotel("Modern Hotel", "123 Main Street");
+    hotel.autoAddRooms(10, 10, 10);
+    hotel.loadReservationsFromFile();
+Scanner: Reads user input from the console.
+Hotel: Creates a hotel object.
+autoAddRooms: Adds 10 singles, 10 doubles, 10 suites (see above for logic).
+loadReservationsFromFile: Loads any existing reservations from file.
+    while (true) {
+        // Print menu and get user choice
+        // Use switch to handle each menu option
+    }
+}
+Menu Loop: Keeps running until the user chooses to exit.
+Menu Options:
+1: Make a reservation (asks for guest info, room type, dates, nights, then tries to book).
+2: View all reservations.
+3: Cancel a reservation by ID.
+4: Exit the program.
